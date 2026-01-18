@@ -1,12 +1,22 @@
 /**
  * Run seed SQL via Supabase Management API
+ *
+ * Requires environment variables:
+ * - SUPABASE_PROJECT_REF: Your Supabase project reference ID
+ * - SUPABASE_ACCESS_TOKEN: Your Supabase Personal Access Token
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
-const PROJECT_REF = 'wvauuksvdavszzcaelkg';
-const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN || 'sbp_ecf4ebb1fb6f744b3fc9fb0c84094a465d8c4b64';
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF;
+const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+
+if (!PROJECT_REF || !ACCESS_TOKEN) {
+  console.error('Error: Required environment variables are missing');
+  console.error('Please set SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN');
+  process.exit(1);
+}
 
 async function runSeed() {
   const seedPath = path.join(__dirname, 'seed.sql');
