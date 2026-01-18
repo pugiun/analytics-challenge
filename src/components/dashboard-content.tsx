@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import {
-  type DateRangeOption,
-  DateRangeSelector,
-} from "@/components/charts/date-range-selector";
+import { DateRangeSelector } from "@/components/charts/date-range-selector";
 import { EngagementChart } from "@/components/charts/engagement-chart";
 import { MetricsCards } from "@/components/charts/metrics-cards";
 import { PostsTableContainer } from "@/components/posts/posts-table-container";
+import { useDashboardStore } from "@/stores/dashboard-store";
 
 export function DashboardContent() {
-  const [dateRange, setDateRange] = useState<DateRangeOption>("7d");
+  const { dateRange, setDateRange } = useDashboardStore();
 
   return (
     <>
@@ -25,7 +22,7 @@ export function DashboardContent() {
       </div>
 
       <div className="mt-8">
-        <PostsTableContainer dateRange={dateRange} />
+        <PostsTableContainer />
       </div>
     </>
   );

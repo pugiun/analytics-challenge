@@ -1,7 +1,5 @@
 "use client";
 
-import type { DateRangeOption } from "@/components/charts/date-range-selector";
-import { getDateRange } from "@/components/charts/date-range-selector";
 import { PostsTable } from "@/components/posts/posts-table";
 import {
   Card,
@@ -12,22 +10,15 @@ import {
 } from "@/components/ui/card";
 import { usePosts } from "@/hooks/use-posts";
 
-type PostsTableContainerProps = {
-  dateRange?: DateRangeOption;
-};
-
-export function PostsTableContainer({
-  dateRange = "7d",
-}: PostsTableContainerProps) {
-  const { data: posts, isLoading, error } = usePosts(dateRange);
-  const dateRangeInfo = getDateRange(dateRange);
+export function PostsTableContainer() {
+  const { data: posts, isLoading, error } = usePosts();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Your Posts</CardTitle>
         <CardDescription>
-          Posts from {dateRangeInfo.label.toLowerCase()} across platforms
+          All posts across platforms
         </CardDescription>
       </CardHeader>
       <CardContent>

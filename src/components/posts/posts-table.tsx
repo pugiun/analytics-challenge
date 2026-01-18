@@ -5,14 +5,16 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { PostDetailModal } from "@/components/posts/post-detail-modal";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -29,6 +31,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  type PlatformFilter,
+  type SortColumn,
+  useDashboardStore,
+} from "@/stores/dashboard-store";
 import type { Post } from "@/types/database";
 
 function truncateCaption(caption: string | null, maxLength = 50): string {
@@ -179,14 +186,42 @@ type PostsTableProps = {
 };
 
 export function PostsTable({ posts, isLoading }: PostsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const {
+    page,
+    pageSize,
+    platformFilter,
+    sortColumn,
+    sortOrder,
+    setPage,
+    setPageSize,
+    setPlatformFilter,
+    setSort,
+  } = useDashboardStore();
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Derive sorting state from store
+  const sorting: SortingState = useMemo(
+    () => [{ id: sortColumn, desc: sortOrder === "desc" }],
+    [sortColumn, sortOrder]
+  );
+
+  const handleSortingChange = (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+    if (newSorting.length > 0) {
+      const { id, desc } = newSorting[0];
+      setSort(id as SortColumn, desc ? "desc" : "asc");
+    }
+  };
 
   const handleRowClick = (post: Post) => {
     setSelectedPost(post);
     setIsModalOpen(true);
+  };
+
+  const handlePlatformChange = (value: string) => {
+    setPlatformFilter(value as PlatformFilter);
   };
 
   const filteredData = useMemo(() => {
@@ -200,11 +235,29 @@ export function PostsTable({ posts, isLoading }: PostsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: handleSortingChange,
     state: {
       sorting,
+      pagination: {
+        pageIndex: page - 1,
+        pageSize,
+      },
     },
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        const newState = updater({ pageIndex: page - 1, pageSize });
+        setPage(newState.pageIndex + 1);
+        if (newState.pageSize !== pageSize) {
+          setPageSize(newState.pageSize);
+        }
+      }
+    },
+    manualPagination: false,
   });
+
+  const totalPages = table.getPageCount();
+  const currentPage = table.getState().pagination.pageIndex + 1;
 
   if (isLoading) {
     return (
@@ -247,10 +300,10 @@ export function PostsTable({ posts, isLoading }: PostsTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Array.from({ length: 5 }).map((_, i) => (
+              {Array.from({ length: pageSize }).map((_, i) => (
                 <TableRow
                   key={`skeleton-row-${
-                    // biome-ignore lint/suspicious/noArrayIndexKey: <>
+                    // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton rows
                     i
                   }`}
                 >
@@ -289,25 +342,44 @@ export function PostsTable({ posts, isLoading }: PostsTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Filter by platform:
+            </span>
+            <Select value={platformFilter} onValueChange={handlePlatformChange}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All platforms" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All platforms</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <span className="text-sm text-muted-foreground">
-            Filter by platform:
+            {filteredData.length} post{filteredData.length !== 1 ? "s" : ""}
           </span>
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All platforms" />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Rows per page:</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => setPageSize(Number(value))}
+          >
+            <SelectTrigger className="w-[70px]">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All platforms</SelectItem>
-              <SelectItem value="instagram">Instagram</SelectItem>
-              <SelectItem value="tiktok">TikTok</SelectItem>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <span className="text-sm text-muted-foreground">
-          {filteredData.length} post{filteredData.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
       <div className="rounded-md border">
@@ -358,6 +430,52 @@ export function PostsTable({ posts, isLoading }: PostsTableProps) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Showing {((currentPage - 1) * pageSize) + 1} to{" "}
+          {Math.min(currentPage * pageSize, filteredData.length)} of{" "}
+          {filteredData.length} posts
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(1)}
+            disabled={currentPage === 1}
+          >
+            First
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-sm">
+            Page {currentPage} of {totalPages || 1}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setPage(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(totalPages)}
+            disabled={currentPage >= totalPages}
+          >
+            Last
+          </Button>
+        </div>
       </div>
 
       <PostDetailModal

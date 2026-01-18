@@ -12,7 +12,7 @@ import {
   Tooltip,
   type TooltipItem,
 } from "chart.js";
-import { AreaChart, LineChart, TrendingDown, TrendingUp } from "lucide-react";
+import { AreaChart, BarChart3, LineChart, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Line } from "react-chartjs-2";
 import type { DateRangeOption } from "@/components/charts/date-range-selector";
@@ -214,6 +214,12 @@ export function EngagementChart({ dateRange = "7d" }: EngagementChartProps) {
         {isLoading ? (
           <div className="h-[300px] space-y-4">
             <Skeleton className="h-full w-full" />
+          </div>
+        ) : !response?.data.length ? (
+          <div className="flex h-[300px] flex-col items-center justify-center text-muted-foreground">
+            <BarChart3 className="size-12 mb-4 opacity-50" />
+            <p className="text-lg font-medium">No data available</p>
+            <p className="text-sm">There's no engagement data for this period yet.</p>
           </div>
         ) : (
           <div className="h-[300px]">
